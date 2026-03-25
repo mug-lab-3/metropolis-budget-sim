@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>20代後半・首都圏ライフスタイル設計シミュレーター</title>
+    <style>
+        :root { --main-color: #34495e; --accent-color: #1abc9c; --bg-color: #f5f7fa; --warn-color: #e74c3c; }
+        body { font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif; background-color: var(--bg-color); color: #333; margin: 0; padding: 0; min-height: 100vh; }
+        
+        .container { 
+            display: flex; 
+            max-width: 1100px; 
+            margin: 0 auto;
+            gap: 30px; 
+            padding: 40px 20px; 
+            align-items: flex-start;
+            transition: all 0.4s ease;
+        }
+        
+        /* 左側：シミュレーターエリア（位置を固定） */
+        .main-card { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+            flex: 0 0 400px; /* 幅を400pxに固定して動かないようにする */
+            position: sticky; 
+            top: 40px; 
+        }
+        
+        header { border-bottom: 2px solid #eee; margin-bottom: 20px; padding-bottom: 15px; position: relative; }
+        h1 { font-size: 1.3rem; margin: 0; color: var(--main-color); }
+        .target-tag { font-size: 0.75rem; color: #95a5a6; margin-top: 5px; display: block; }
+
+        /* コラム切り替えスイッチ */
+        .toggle-btn { 
+            position: absolute; 
+            right: 0; 
+            top: 5px; 
+            background: var(--main-color); 
+            color: white; 
+            border: none; 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            font-size: 0.75rem; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: opacity 0.2s; 
+        }
+        .toggle-btn:hover { opacity: 0.8; }
+        
+        .input-section { margin: 25px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; }
+        .input-hint { font-size: 0.7rem; color: #e67e22; margin-bottom: 8px; font-weight: bold; }
+        input[type="number"] { width: 100%; padding: 15px; border: 2px solid #edf2f7; border-radius: 10px; font-size: 1.3rem; font-weight: 600; box-sizing: border-box; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .item { padding: 15px; border-radius: 12px; position: relative; }
+        .item.rent { background: #2c3e50; color: white; grid-column: span 2; border-bottom: 4px solid var(--warn-color); }
+        .item.living { background: #f8f9fa; border: 1px solid #e2e8f0; }
+        .item.hobby { background: #e0f7fa; border: 1px solid #b2ebf2; }
+        .item.invest { background: #fdf2f2; border: 1px solid #fee2e2; }
+        .label-text { font-size: 0.75rem; display: block; margin-bottom: 3px; opacity: 0.9; }
+        .value-text { font-size: 1.15rem; font-weight: bold; }
+
+        /* 右側：コラムエリア（右へスライドして消える） */
+        .column-side { 
+            flex: 1; 
+            line-height: 1.7; 
+            color: #445; 
+            transition: transform 0.4s ease, opacity 0.3s ease, max-width 0.4s ease; 
+            overflow: hidden; 
+            max-width: 600px; 
+            opacity: 1; 
+            transform: translateX(0);
+        }
+        
+        /* 非表示時の設定：右側に追い出す */
+        .column-side.hidden { 
+            max-width: 0; 
+            opacity: 0; 
+            transform: translateX(50px);
+            pointer-events: none; 
+            margin-left: -30px; 
+        }
+
+        .column-side h2 { font-size: 1.2rem; color: var(--main-color); border-bottom: 2px solid var(--accent-color); display: inline-block; margin-bottom: 20px; }
+        .article { background: transparent; padding: 0 10px; min-width: 450px; }
+        .article h3 { font-size: 1rem; color: var(--main-color); margin-top: 25px; display: flex; align-items: center; }
+        .article h3::before { content: "●"; color: var(--accent-color); margin-right: 8px; font-size: 0.8rem; }
+        .article p { font-size: 0.9rem; margin: 10px 0; }
+        .stat-box { background: #fff; border-radius: 12px; padding: 15px; border: 1px solid #eee; margin: 15px 0; font-size: 0.85rem; }
+
+        #alert-area { margin-top: 20px; padding: 15px; border-radius: 10px; font-size: 0.85rem; font-weight: bold; display: none; }
+        .alert-danger { background: #fde8e8; color: #c81e1e; }
+        .alert-warning { background: #fffbeb; color: #92400e; }
+        .alert-safe { background: #e6ffed; color: #22543d; }
+
+        @media (max-width: 900px) { 
+            .container { flex-direction: column; align-items: center; } 
+            .main-card { position: static; min-width: 100%; flex: auto; } 
+            .column-side.hidden { max-width: 0; transform: translateY(20px); margin-top: -30px; } 
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="main-card">
+        <header>
+            <h1>ライフスタイル設計</h1>
+            <span class="target-tag">20代後半 / 首都圏勤務（都心1h圏内）</span>
+            <button class="toggle-btn" onclick="toggleColumn()" id="btn-text">コラムを隠す</button>
+        </header>
+
+        <div class="input-section">
+            <label>想定月収（手取り平均）</label>
+            <div class="input-hint">※ボーナス込の年間手取り÷12を推奨</div>
+            <input type="number" id="income" value="280000" oninput="calculate()">
+        </div>
+
+        <div class="grid">
+            <div class="item rent">
+                <span class="label-text">家賃上限（QOL投資枠）</span>
+                <span id="res-rent" class="value-text">0 円</span>
+            </div>
+            <div class="item living">
+                <span class="label-text">基本生活費</span>
+                <span id="res-living" class="value-text">0 円</span>
+            </div>
+            <div class="item hobby">
+                <span class="label-text">自己投資・経験</span>
+                <span id="res-hobby" class="value-text">0 円</span>
+            </div>
+            <div class="item invest">
+                <span class="label-text">資産形成・予備費</span>
+                <span id="res-invest" class="value-text">0 円</span>
+            </div>
+        </div>
+
+        <div id="alert-area"></div>
+    </div>
+
+    <div class="column-side" id="column-side">
+        <div class="article">
+            <h2>COLUMN: 首都圏で「自分を殺さない」戦略</h2>
+            
+            <h3>なぜ「手取り28万」が理想の境界なのか</h3>
+            <p>現代の首都圏、特に港区や渋谷区といった都心へ1時間以内でアクセスできるエリアの家賃相場は、単身者向けでも10〜11万円が「最低ライン」になりつつあります。この過酷な状況下で、従来の『家賃は手取りの3分の1』という古い定説を当てはめると、手取り28万円以下の層は、住環境か将来の備えのどちらかを極端に切り捨てる選択を迫られます。</p>
+
+            <div class="stat-box">
+                <strong>【現実の数字】</strong><br>
+                20代後半の平均手取りは20〜24万円。この層が11万円の家に住むと、比率は45%を超えます。これが、若者が「貯金ができない」「趣味にお金が使えない」と感じる構造的要因です。
+            </div>
+
+            <h3>「投資バッファ」という考え方</h3>
+            <p>このシミュレーターでは、低収入時に無理な投資を推奨しません。20代後半という貴重な時期に、月数千円の積み立てのために食費を削り、ボロいアパートで過ごすことは、長期的な「稼ぐ力」を損なうリスクがあるからです。まずは環境（家賃）を整え、経験（自己投資）を積み、手取りを28万円以上の「三権分立」が成立するステージへ引き上げることを最優先としています。</p>
+
+            <h3>収入増をどう分配すべきか</h3>
+            <p>年収が上がった際、全てを贅沢品に回すのではなく、このロジックでは「家賃40%：生活費20%：趣味15%：投資25%」の比率で増分をスライドさせます。これにより、生活レベルを不自然に抑え込むことなく、自然に資産形成スピードが加速する設計になっています。エリートを目指すのではなく、首都圏という高コストな戦場で、心身の健康を維持しつつ賢く生き残るための動的ポートフォリオです。</p>
+
+            <p style="font-size: 0.8rem; color: #888; margin-top: 30px;">
+                ※本アプリの計算式は、2026年現在の都心部家賃相場および物価上昇率を加味して独自に算出したものです。
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleColumn() {
+    const col = document.getElementById('column-side');
+    const btn = document.getElementById('btn-text');
+    if (col.classList.contains('hidden')) {
+        col.classList.remove('hidden');
+        btn.innerText = "コラムを隠す";
+    } else {
+        col.classList.add('hidden');
+        btn.innerText = "コラムを表示";
+    }
+}
+
+function calculate() {
+    const I = parseInt(document.getElementById('income').value) || 0;
+    const minRent = 110000;
+    const baseLiving = 110000;
+    const baseHobby = 30000;
+    
+    let rent, living, hobby, invest;
+    let msg = "";
+    let cls = "";
+
+    if (I < 300000) {
+        rent = minRent;
+        living = Math.min(baseLiving, I - rent);
+        if (living < 100000) living = 100000;
+        let remain = I - rent - living;
+        if (remain >= baseHobby) {
+            hobby = baseHobby;
+            invest = remain - hobby;
+        } else {
+            hobby = Math.max(0, remain);
+            invest = 0;
+        }
+    } else {
+        const dI = I - 300000;
+        rent = minRent + (dI * 0.40);   
+        living = baseLiving + (dI * 0.20); 
+        hobby = baseHobby + (dI * 0.15);  
+        invest = I - (rent + living + hobby); 
+    }
+
+    if (I < 220000) {
+        msg = "❌ 警告：収支が破綻しています。固定費の見直しが必要です。";
+        cls = "alert-danger";
+    } else if (invest <= 0) {
+        msg = "💡 方針：今は「投資」より「生活と経験」を優先すべき時期です。";
+        cls = "alert-warning";
+    } else if (invest < (I * 0.1)) {
+        msg = "⚠️ 注意：投資額が少なめです。家賃が上限に達しています。";
+        cls = "alert-warning";
+    } else {
+        msg = "✅ 良好：環境・経験・未来が両立された理想的な配分です。";
+        cls = "alert-safe";
+    }
+
+    document.getElementById('res-rent').innerText = Math.round(rent).toLocaleString() + " 円";
+    document.getElementById('res-living').innerText = Math.round(living).toLocaleString() + " 円";
+    document.getElementById('res-hobby').innerText = Math.round(hobby).toLocaleString() + " 円";
+    document.getElementById('res-invest').innerText = Math.round(invest).toLocaleString() + " 円";
+
+    const alertBox = document.getElementById('alert-area');
+    alertBox.innerText = msg;
+    alertBox.className = "alert-box " + cls;
+    alertBox.style.display = "block";
+}
+calculate();
+</script>
+</body>
+</html>
